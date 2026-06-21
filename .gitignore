@@ -25,6 +25,9 @@ data/uploads/*.jpg
 # Docker
 *.log
 
+# Obsidian vault (local default — set OBSIDIAN_VAULT_HOST_PATH in .env to use your real vault)
+obsidian-vault/*
+
 # OS
 .DS_Store
 Thumbs.db

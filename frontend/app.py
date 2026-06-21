@@ -8,7 +8,7 @@ st.set_page_config(page_title="抄読会資料ジェネレーター", page_icon=
 st.title("📄 医学論文 抄読会資料ジェネレーター")
 st.caption("PDFをアップロードすると、PICO・新規性・結果・限界・臨床応用を自動生成します。")
 
-for k in ["summary", "filename", "pdf_bytes", "pptx_bytes", "fig_pptx_bytes"]:
+for k in ["summary", "filename", "pdf_bytes", "pptx_bytes", "fig_pptx_bytes", "progress_pptx_bytes"]:
     if k not in st.session_state:
         st.session_state[k] = None
 
@@ -119,3 +119,77 @@ if st.session_state.summary:
                     st.error(f"エラー: {detail}")
                 except Exception as e:
                     st.error(f"予期しないエラー: {e}")
+
+# ── Project tools ─────────────────────────────────────────────────────────────
+st.divider()
+st.subheader("🗂️ プロジェクト管理ツール")
+
+pt_col1, pt_col2, pt_col3 = st.columns(3)
+
+with pt_col1:
+    st.markdown("**📝 Obsidian 論文要約保存**")
+    if st.session_state.summary:
+        if st.button("論文要約をObsidianに保存", type="secondary", key="btn_obs_note"):
+            with st.spinner("Obsidianに書き込み中…"):
+                try:
+                    res = requests.post(
+                        f"{BACKEND_URL}/export/obsidian-note",
+                        json={
+                            "summary":  st.session_state.summary,
+                            "filename": st.session_state.filename or "論文",
+                        },
+                        timeout=10,
+                    )
+                    res.raise_for_status()
+                    st.success(f"保存完了: {res.json().get('note_name', '')}")
+                except requests.exceptions.HTTPError as e:
+                    detail = e.response.json().get("detail", str(e)) if e.response else str(e)
+                    st.error(f"エラー: {detail}")
+                except Exception as e:
+                    st.error(f"エラー: {e}")
+    else:
+        st.caption("論文要約を生成してから使用できます")
+
+with pt_col2:
+    st.markdown("**🔄 Obsidian 開発ログ同期**")
+    if st.button("dev_log をObsidianに同期", type="secondary", key="btn_sync_devlog"):
+        with st.spinner("同期中…"):
+            try:
+                res = requests.post(f"{BACKEND_URL}/sync/devlog", timeout=10)
+                res.raise_for_status()
+                st.success("同期完了")
+            except requests.exceptions.HTTPError as e:
+                detail = e.response.json().get("detail", str(e)) if e.response else str(e)
+                st.error(f"エラー: {detail}")
+            except Exception as e:
+                st.error(f"エラー: {e}")
+
+with pt_col3:
+    st.markdown("**📊 進捗報告PPTX**")
+    if st.session_state.progress_pptx_bytes:
+        st.success("生成完了！")
+        st.download_button(
+            label="📥 進捗報告PPTXをダウンロード",
+            data=st.session_state.progress_pptx_bytes,
+            file_name="進捗報告.pptx",
+            mime=PPTX_MIME,
+            key="dl_progress_pptx",
+        )
+        if st.button("再生成", key="btn_regen_progress"):
+            st.session_state.progress_pptx_bytes = None
+            st.rerun()
+    else:
+        if st.button("進捗報告PPTXを生成", type="secondary", key="btn_gen_progress"):
+            with st.spinner("AIが開発ログを解析してスライドを生成中…（30〜60秒）"):
+                try:
+                    res = requests.post(
+                        f"{BACKEND_URL}/export/progress-pptx", timeout=120
+                    )
+                    res.raise_for_status()
+                    st.session_state.progress_pptx_bytes = res.content
+                    st.rerun()
+                except requests.exceptions.HTTPError as e:
+                    detail = e.response.json().get("detail", str(e)) if e.response else str(e)
+                    st.error(f"エラー: {detail}")
+                except Exception as e:
+                    st.error(f"エラー: {e}")

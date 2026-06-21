@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   backend:
     build: ./backend
@@ -8,6 +6,14 @@ services:
       - "8000:8000"
     volumes:
       - ./data/uploads:/app/data/uploads
+      - ./dev_log.md:/app/dev_log.md:ro
+      # Obsidian vault mount.
+      # Set OBSIDIAN_VAULT_HOST_PATH in .env to your actual vault path
+      # (use forward slashes on Windows, e.g. C:/Users/TK/Documents/Obsidian/MyVault).
+      # If not set, notes are written to ./obsidian-vault/ in the project root.
+      - ${OBSIDIAN_VAULT_HOST_PATH:-./obsidian-vault}:/obsidian-vault
+    environment:
+      - OBSIDIAN_VAULT_PATH=/obsidian-vault
     env_file:
       - .env
     restart: unless-stopped
